@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "910517526514",
+    "project_id": "recruitiq-f1dc3",
+    "storage_bucket": "recruitiq-f1dc3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:910517526514:android:3071f838c094d47dafd56b",
+        "android_client_info": {
+          "package_name": "com.example.recruit_iq"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCrhjSsyv7XbLN-w6D0MHZRSjRTvVD46I8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

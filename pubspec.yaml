@@ -1,0 +1,41 @@
+name: hr_resume_parser
+description: HR Resume Parser - FYP Project | MVVM + Provider + Firebase
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.5
+  firebase_core: ^2.32.0
+  firebase_auth: ^4.16.0
+  cloud_firestore: ^4.17.5
+  firebase_messaging: ^14.7.10
+  google_fonts: ^6.3.0
+  fl_chart: ^0.66.2
+  file_picker: ^8.1.2
+  http: ^1.2.2
+  shared_preferences: ^2.3.2
+  url_launcher: ^6.3.1
+  intl: ^0.19.0
+  path_provider: ^2.1.4
+  connectivity_plus: ^6.1.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icon/image.png
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/image.png"
+  min_sdk_android: 21
