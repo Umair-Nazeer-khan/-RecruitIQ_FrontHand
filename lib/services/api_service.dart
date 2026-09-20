@@ -26,7 +26,7 @@ class ApiService {
     try {
       return await action();
     } on TimeoutException {
-      throw ApiException('The RecruitIQ server is taking too long to respond. Please check your internet connection.');
+      throw ApiException('The server is taking too long to respond. Please check your connection.');
     } catch (e) {
       if (e is ApiException) rethrow;
       final text = e.toString().toLowerCase();
@@ -67,12 +67,16 @@ class ApiService {
 
   // ── AUTHENTICATION ──────────────────────────────────────────
 
-  static Future<dynamic> login(String email, String password) async {
+  static Future<dynamic> login(String email, String password, {String? fcmToken}) async {
     return _guard(() async {
       final res = await _client.post(
         Uri.parse('$baseUrl/auth/login/'),
         headers: _headers(null),
-        body: jsonEncode({'email': email, 'password': password}),
+        body: jsonEncode({
+          'email': email, 
+          'password': password,
+          if (fcmToken != null) 'fcm_token': fcmToken,
+        }),
       ).timeout(const Duration(seconds: 15));
       return _handle(res);
     });
@@ -112,7 +116,29 @@ class ApiService {
     });
   }
 
-  // ── CORE FEATURES ───────────────────────────────────────────
+  static Future<void> updateFcmToken(String token, String accessToken) async {
+    return _guard(() async {
+      final res = await _client.patch(
+        Uri.parse('$baseUrl/auth/update-fcm/'),
+        headers: _headers(accessToken),
+        body: jsonEncode({'fcm_token': token}),
+      ).timeout(const Duration(seconds: 10));
+      _handle(res);
+    });
+  }
+
+  static Future<Map<String, dynamic>> refreshToken(String refreshToken) async {
+    return _guard(() async {
+      final res = await _client.post(
+        Uri.parse('$baseUrl/auth/token/refresh/'),
+        headers: _headers(null),
+        body: jsonEncode({'refresh': refreshToken}),
+      ).timeout(const Duration(seconds: 15));
+      return _handle(res);
+    });
+  }
+
+  // ── CANDIDATES & RESUMES ────────────────────────────────────
 
   static Future<Candidate> uploadResume(Uint8List bytes, String filename, String accessToken) async {
     return _guard(() async {
@@ -134,9 +160,8 @@ class ApiService {
 
   static Future<List<Candidate>> getCandidates(String accessToken, {String? status}) async {
     return _guard(() async {
-      final uri = Uri.parse('$baseUrl/resumes/').replace(
-        queryParameters: status != null ? {'status': status} : null,
-      );
+      final query = status != null ? '?status=$status' : '';
+      final uri = Uri.parse('$baseUrl/resumes/$query');
       final res = await _client.get(uri, headers: _headers(accessToken)).timeout(const Duration(seconds: 20));
       final data = _handle(res);
       final List list = data['candidates'] ?? [];
@@ -153,16 +178,81 @@ class ApiService {
     });
   }
 
-  static Future<void> updateCandidateStatus(int id, String status, String accessToken) async {
+  static Future<void> updateCandidateStatus(int id, String status, String accessToken, {String? hrNotes}) async {
     return _guard(() async {
       final res = await _client.patch(
-        Uri.parse('$baseUrl/resumes/$id/'),
+        Uri.parse('$baseUrl/resumes/$id/status/'),
         headers: _headers(accessToken),
-        body: jsonEncode({'status': status}),
+        body: jsonEncode({
+          'status': status,
+          if (hrNotes != null) 'hr_notes': hrNotes,
+        }),
       ).timeout(const Duration(seconds: 15));
       _handle(res);
     });
   }
+
+  static Future<Map<String, dynamic>> getStats(String accessToken) async {
+    return _guard(() async {
+      final res = await _client.get(
+        Uri.parse('$baseUrl/resumes/stats/'),
+        headers: _headers(accessToken),
+      ).timeout(const Duration(seconds: 10));
+      return _handle(res);
+    });
+  }
+
+  static String getResumeDownloadUrl(int id, String accessToken) {
+    return '$baseUrl/resumes/$id/download/?token=$accessToken';
+  }
+
+  // ── JOBS ────────────────────────────────────────────────────
+
+  static Future<List<JobRequirement>> getJobs(String accessToken) async {
+    return _guard(() async {
+      final res = await _client.get(Uri.parse('$baseUrl/jobs/'), headers: _headers(accessToken))
+          .timeout(const Duration(seconds: 15));
+      final data = _handle(res);
+      final List list = data is List ? data : (data['jobs'] ?? []);
+      return list.map((e) => JobRequirement.fromJson(e)).toList();
+    });
+  }
+
+  static Future<JobRequirement> createJob(JobRequirement job, String accessToken) async {
+    return _guard(() async {
+      final res = await _client.post(
+        Uri.parse('$baseUrl/jobs/'),
+        headers: _headers(accessToken),
+        body: jsonEncode(job.toJson()),
+      ).timeout(const Duration(seconds: 15));
+      final data = _handle(res);
+      return JobRequirement.fromJson(data);
+    });
+  }
+
+  static Future<JobRequirement> updateJob(int id, JobRequirement job, String accessToken) async {
+    return _guard(() async {
+      final res = await _client.put(
+        Uri.parse('$baseUrl/jobs/$id/'),
+        headers: _headers(accessToken),
+        body: jsonEncode(job.toJson()),
+      ).timeout(const Duration(seconds: 15));
+      final data = _handle(res);
+      return JobRequirement.fromJson(data);
+    });
+  }
+
+  static Future<void> deleteJob(int id, String accessToken) async {
+    return _guard(() async {
+      final res = await _client.delete(
+        Uri.parse('$baseUrl/jobs/$id/'),
+        headers: _headers(accessToken),
+      ).timeout(const Duration(seconds: 10));
+      _handle(res);
+    });
+  }
+
+  // ── MATCHING ────────────────────────────────────────────────
 
   static Future<MatchResult> matchCandidates(JobRequirement job, String accessToken) async {
     return _guard(() async {
@@ -176,13 +266,16 @@ class ApiService {
     });
   }
 
-  static Future<List<JobRequirement>> getJobs(String accessToken) async {
+  static Future<List<Candidate>> getMatchResults(String accessToken, {double? minScore}) async {
     return _guard(() async {
-      final res = await _client.get(Uri.parse('$baseUrl/jobs/'), headers: _headers(accessToken))
-          .timeout(const Duration(seconds: 15));
+      final query = minScore != null ? '?min_score=$minScore' : '';
+      final res = await _client.get(
+        Uri.parse('$baseUrl/matching/results/$query'),
+        headers: _headers(accessToken),
+      ).timeout(const Duration(seconds: 20));
       final data = _handle(res);
-      final List list = data is List ? data : (data['jobs'] ?? []);
-      return list.map((e) => JobRequirement.fromJson(e)).toList();
+      final List results = data['results'] ?? [];
+      return results.map((e) => Candidate.fromMatchResult(e)).toList();
     });
   }
 }

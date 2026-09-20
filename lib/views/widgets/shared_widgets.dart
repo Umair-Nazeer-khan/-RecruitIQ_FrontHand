@@ -16,7 +16,7 @@ class ScorePill extends StatelessWidget {
       decoration: BoxDecoration(
         color: scoreBgColor(score),
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: scoreColor(score).withOpacity(.12)),
+        border: Border.all(color: scoreColor(score).withValues(alpha: 0.12)),
       ),
       child: Text(
         '${score.toInt()}%',
@@ -39,9 +39,9 @@ class AiBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.accent.withOpacity(.09),
+        color: AppColors.accent.withValues(alpha: 0.09),
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: AppColors.accent.withOpacity(.15)),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.15)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -84,7 +84,7 @@ class AvatarCircle extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [avatarColor(name), avatarColor(name).withOpacity(.72)],
+          colors: [avatarColor(name), avatarColor(name).withValues(alpha: 0.72)],
         ),
         borderRadius: BorderRadius.circular(size * .28),
       ),
@@ -208,7 +208,7 @@ class CandidateListCard extends StatelessWidget {
       color: AppColors.cardBg,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: AppColors.border2),
+        side: const BorderSide(color: AppColors.border2),
       ),
       child: InkWell(
         onTap: onTap,
@@ -231,7 +231,7 @@ class CandidateListCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '${candidate.skills.take(2).join(', ')}${candidate.skills.isNotEmpty ? ' · ' : ''}${candidate.experienceYears.toStringAsFixed(0)} yrs exp',
+                      '${candidate.skills.take(3).join(', ')}${candidate.skills.length > 3 ? '...' : ''} · ${candidate.experienceYears.toStringAsFixed(0)}y exp',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppText.caption(10),
@@ -244,7 +244,7 @@ class CandidateListCard extends StatelessWidget {
                 ScorePill(score),
               ],
               const SizedBox(width: 4),
-              Icon(Icons.chevron_right_rounded,
+              const Icon(Icons.chevron_right_rounded,
                   color: AppColors.ink3, size: 20),
             ],
           ),
@@ -254,7 +254,7 @@ class CandidateListCard extends StatelessWidget {
   }
 }
 
-// ── PROFESSIONAL STATE VIEWS (Critical for FYP) ─────────────
+// ── PROFESSIONAL STATE VIEWS ──────────────────
 
 class StandardErrorView extends StatelessWidget {
   final String message;
@@ -276,7 +276,7 @@ class StandardErrorView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.red.withOpacity(.08),
+                color: AppColors.red.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.error_outline_rounded,
@@ -327,7 +327,7 @@ class StandardEmptyView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 52, color: AppColors.ink3.withOpacity(.3)),
+            Icon(icon, size: 52, color: AppColors.ink3.withValues(alpha: 0.3)),
             const SizedBox(height: 20),
             Text(title, style: AppText.title(15)),
             const SizedBox(height: 6),
@@ -369,7 +369,7 @@ class AppLoadingOverlay extends StatelessWidget {
         if (isLoading)
           Positioned.fill(
             child: Container(
-              color: Colors.black.withOpacity(.4),
+              color: Colors.black.withValues(alpha: 0.4),
               child: Center(
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -444,7 +444,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
       actions: actions,
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
-        child: Container(height: 1, color: AppColors.border),
+        child: Container(height: 1, color: AppColors.divider),
       ),
     );
   }
@@ -464,7 +464,7 @@ class SkillTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = required ? AppColors.accent.withOpacity(.09) : AppColors.surface;
+    final bg = required ? AppColors.accent.withValues(alpha: 0.09) : AppColors.surface;
     final fg = required ? AppColors.accentDark : AppColors.ink2;
 
     return Container(
@@ -474,7 +474,7 @@ class SkillTag extends StatelessWidget {
         borderRadius: BorderRadius.circular(100),
         border: Border.all(
           color:
-              required ? AppColors.accent.withOpacity(.16) : AppColors.border2,
+              required ? AppColors.accent.withValues(alpha: 0.16) : AppColors.border2,
         ),
       ),
       child: Row(
@@ -492,7 +492,7 @@ class SkillTag extends StatelessWidget {
               onTap: onRemove,
               borderRadius: BorderRadius.circular(20),
               child: Icon(Icons.close_rounded,
-                  size: 14, color: fg.withOpacity(.55)),
+                  size: 14, color: fg.withValues(alpha: 0.55)),
             ),
           ],
         ],
@@ -560,7 +560,7 @@ class RecruitIQLogo extends StatelessWidget {
         boxShadow: shadow
             ? [
                 BoxShadow(
-                  color: AppColors.orange.withOpacity(.20),
+                  color: AppColors.orange.withValues(alpha: 0.20),
                   blurRadius: size * .28,
                   offset: Offset(0, size * .10),
                 )

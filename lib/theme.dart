@@ -37,14 +37,14 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.logoAqua.withOpacity(.42),
+        fillColor: AppColors.logoAqua.withValues(alpha: .42),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(13),
-          borderSide: BorderSide(color: AppColors.border2),
+          borderSide: const BorderSide(color: AppColors.border2),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(13),
-          borderSide: BorderSide(color: AppColors.border2),
+          borderSide: const BorderSide(color: AppColors.border2),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(13),
@@ -74,7 +74,7 @@ class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.logoAqua,
         selectedColor: AppColors.orangeSoft,
-        side: BorderSide(color: AppColors.border2),
+        side: const BorderSide(color: AppColors.border2),
         labelStyle: GoogleFonts.dmSans(color: AppColors.ink2, fontSize: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),

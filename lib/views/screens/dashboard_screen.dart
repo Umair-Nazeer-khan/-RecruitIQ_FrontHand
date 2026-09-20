@@ -5,12 +5,12 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/dashboard_viewmodel.dart';
+import '../../viewmodels/job_viewmodel.dart';
 import '../../utils/app_constants.dart';
-import '../../models/models.dart';
 import '../widgets/shared_widgets.dart';
 import 'upload_screen.dart';
 import 'candidate_detail_screen.dart';
-import 'job_requirements_screen.dart';
+import 'jobs_list_screen.dart';
 import 'shortlist_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -23,17 +23,13 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _navIndex = 0;
 
-  final _titles = const [
-    'Dashboard',
-    'Resume Upload',
-    'Job Requirements',
-    'Shortlist'
-  ];
-
   void _goTo(int index) {
     setState(() => _navIndex = index);
     if (index == 0) {
       context.read<DashboardViewModel>().loadDashboard();
+    } else if (index == 2) {
+      // Use index 2 for Jobs
+      context.read<JobViewModel>().loadJobs();
     } else if (index == 3) {
       context.read<CandidatesViewModel>().load();
     }
@@ -54,7 +50,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final screens = [
       _HomeTab(onNavigate: _goTo),
       const UploadScreen(),
-      const JobRequirementsScreen(),
+      const JobsListScreen(), // Integrated Job List
       const ShortlistScreen(),
     ];
 
@@ -147,20 +143,42 @@ class _DashboardHero extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(AppSpace.lg, AppSpace.xl, AppSpace.lg, AppSpace.xl),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Welcome back,', style: AppText.caption(13, color: Colors.white60)),
-            const SizedBox(height: 4),
-            Text(name, style: AppText.headline(24, color: Colors.white)),
-            const SizedBox(height: 22),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Welcome back,', style: AppText.caption(13, color: Colors.white60)),
+                      const SizedBox(height: 4),
+                      Text(name, style: AppText.headline(24, color: Colors.white)),
+                    ],
+                  ),
+                ),
+                const RecruitIQLogo(size: 42, shadow: false),
+              ],
+            ),
+            const SizedBox(height: 24),
             if (vm.isLoading) 
-              const Center(child: CircularProgressIndicator(color: Colors.white))
-            else 
+              const Center(child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: CircularProgressIndicator(color: Colors.white),
+              ))
+            else ...[
               Row(children: [
-                _StatCard(number: vm.totalCVs.toString(), label: 'Total CVs'),
+                _StatCard(number: vm.totalCVs.toString(), label: 'Total CVs', color: Colors.white),
                 const SizedBox(width: 8),
-                _StatCard(number: vm.shortlisted.toString(), label: 'Shortlisted'),
-                const SizedBox(width: 8),
-                _StatCard(number: vm.openJobs.toString(), label: 'Open Jobs'),
+                _StatCard(number: vm.openJobs.toString(), label: 'Open Jobs', color: AppColors.orange),
               ]),
+              const SizedBox(height: 8),
+              Row(children: [
+                _StatCard(number: vm.shortlisted.toString(), label: 'Shortlisted', color: Colors.blueAccent),
+                const SizedBox(width: 8),
+                _StatCard(number: vm.accepted.toString(), label: 'Hired', color: AppColors.green),
+                const SizedBox(width: 8),
+                _StatCard(number: vm.pending.toString(), label: 'New', color: Colors.white70),
+              ]),
+            ],
           ]),
         ),
       ),
@@ -170,15 +188,17 @@ class _DashboardHero extends StatelessWidget {
 
 class _StatCard extends StatelessWidget {
   final String number, label;
-  const _StatCard({required this.number, required this.label});
+  final Color color;
+  const _StatCard({required this.number, required this.label, required this.color});
   @override
   Widget build(BuildContext context) => Expanded(
     child: Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
       child: Column(children: [
-        Text(number, style: GoogleFonts.syne(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white)),
-        Text(label, style: AppText.caption(10, color: Colors.white38)),
+        Text(number, style: GoogleFonts.syne(fontSize: 20, fontWeight: FontWeight.w800, color: color)),
+        const SizedBox(height: 2),
+        Text(label, style: AppText.caption(9, color: Colors.white38).copyWith(fontWeight: FontWeight.bold)),
       ]),
     ),
   );
@@ -192,25 +212,38 @@ class _DashboardBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const SectionTitle('Quick Actions'),
+      const SectionTitle('Recruitment Hub'),
       const SizedBox(height: 12),
       GridView.count(
         crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, shrinkWrap: true, childAspectRatio: 2.2,
         physics: const NeverScrollableScrollPhysics(),
         children: [
-          _ActionCard(icon: Icons.cloud_upload, title: 'Upload', color: AppColors.accent, onTap: () => onNavigate(1)),
-          _ActionCard(icon: Icons.work, title: 'Jobs', color: AppColors.purple, onTap: () => onNavigate(2)),
-          _ActionCard(icon: Icons.auto_awesome, title: 'Match', color: AppColors.green, onTap: () => onNavigate(2)),
-          _ActionCard(icon: Icons.people, title: 'Shortlist', color: AppColors.amber, onTap: () => onNavigate(3)),
+          _ActionCard(icon: Icons.cloud_upload_outlined, title: 'Upload CV', color: AppColors.accent, onTap: () => onNavigate(1)),
+          _ActionCard(icon: Icons.assignment_outlined, title: 'View Jobs', color: AppColors.green, onTap: () => onNavigate(2)),
+          _ActionCard(icon: Icons.tune_rounded, title: 'Job Matching', color: AppColors.purple, onTap: () => onNavigate(2)),
+          _ActionCard(icon: Icons.star_outline_rounded, title: 'Shortlist', color: AppColors.amber, onTap: () => onNavigate(3)),
         ],
       ),
-      const SizedBox(height: 24),
-      const SectionTitle('Recent Candidates'),
-      const SizedBox(height: 12),
+      const SizedBox(height: 28),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const SectionTitle('Recent Candidates'),
+          TextButton(
+            onPressed: () => onNavigate(3),
+            child: Text('View Pipeline', style: AppText.label(12, color: AppColors.accent)),
+          ),
+        ],
+      ),
+      const SizedBox(height: 4),
       if (vm.topCandidates.isEmpty)
-        const StandardEmptyView(title: 'No candidates yet', subtitle: 'Upload a resume to see candidates here.')
+        const StandardEmptyView(title: 'No candidates yet', subtitle: 'Upload resumes to start screening process.')
       else
-        ...vm.topCandidates.map((c) => CandidateListCard(candidate: c, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CandidateDetailScreen(candidate: c))))),
+        ...vm.topCandidates.take(8).map((c) => CandidateListCard(
+          candidate: c, 
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CandidateDetailScreen(candidate: c)))
+        )),
+      const SizedBox(height: 20),
     ]);
   }
 }
@@ -221,13 +254,18 @@ class _ActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
     onTap: onTap,
+    borderRadius: BorderRadius.circular(14),
     child: Container(
       padding: const EdgeInsets.all(12),
       decoration: AppDecor.card(radius: 14),
       child: Row(children: [
-        Icon(icon, color: color, size: 24),
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+          child: Icon(icon, color: color, size: 20),
+        ),
         const SizedBox(width: 10),
-        Text(title, style: AppText.title(14)),
+        Expanded(child: Text(title, style: AppText.title(13), maxLines: 1, overflow: TextOverflow.ellipsis)),
       ]),
     ),
   );
@@ -239,11 +277,15 @@ class _MobileNavigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) => NavigationBar(
     selectedIndex: selectedIndex, onDestinationSelected: onSelected,
+    height: 64,
+    elevation: 0,
+    backgroundColor: AppColors.cardBg,
+    indicatorColor: AppColors.accent.withValues(alpha: 0.1),
     destinations: const [
-      NavigationDestination(icon: Icon(Icons.grid_view), label: 'Home'),
-      NavigationDestination(icon: Icon(Icons.upload_file), label: 'Upload'),
-      NavigationDestination(icon: Icon(Icons.work), label: 'Jobs'),
-      NavigationDestination(icon: Icon(Icons.stars), label: 'Shortlist'),
+      NavigationDestination(icon: Icon(Icons.grid_view_rounded, size: 22), label: 'Home'),
+      NavigationDestination(icon: Icon(Icons.add_circle_outline_rounded, size: 22), label: 'Upload'),
+      NavigationDestination(icon: Icon(Icons.work_outline_rounded, size: 22), label: 'Jobs'),
+      NavigationDestination(icon: Icon(Icons.star_outline_rounded, size: 22), label: 'Talent'),
     ],
   );
 }
@@ -254,13 +296,26 @@ class _DesktopRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) => NavigationRail(
     extended: true, selectedIndex: selectedIndex, onDestinationSelected: onSelected,
-    leading: const Padding(padding: EdgeInsets.all(16), child: RecruitIQLogo(size: 40)),
+    backgroundColor: AppColors.ink,
+    unselectedIconTheme: const IconThemeData(color: Colors.white54),
+    selectedIconTheme: const IconThemeData(color: Colors.white),
+    unselectedLabelTextStyle: const TextStyle(color: Colors.white54),
+    selectedLabelTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+    leading: const Padding(padding: EdgeInsets.symmetric(vertical: 24), child: RecruitIQLogo(size: 48)),
     destinations: const [
-      NavigationRailDestination(icon: Icon(Icons.grid_view), label: Text('Dashboard')),
-      NavigationRailDestination(icon: Icon(Icons.upload_file), label: Text('Upload')),
-      NavigationRailDestination(icon: Icon(Icons.work), label: Text('Jobs')),
-      NavigationRailDestination(icon: Icon(Icons.stars), label: Text('Shortlist')),
+      NavigationRailDestination(icon: Icon(Icons.grid_view_rounded), label: Text('Dashboard')),
+      NavigationRailDestination(icon: Icon(Icons.add_circle_outline_rounded), label: Text('Resume Upload')),
+      NavigationRailDestination(icon: Icon(Icons.work_outline_rounded), label: Text('Job Match')),
+      NavigationRailDestination(icon: Icon(Icons.star_outline_rounded), label: Text('Talent List')),
     ],
-    trailing: IconButton(onPressed: onLogout, icon: const Icon(Icons.logout)),
+    trailing: Expanded(
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 24),
+          child: IconButton(onPressed: onLogout, icon: const Icon(Icons.logout_rounded, color: Colors.white70)),
+        ),
+      ),
+    ),
   );
 }

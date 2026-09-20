@@ -25,6 +25,8 @@ class _JobForm extends StatefulWidget {
 class _JobFormState extends State<_JobForm> {
   final _skillCtrl = TextEditingController();
   final _optSkillCtrl = TextEditingController();
+  final _minSalaryCtrl = TextEditingController();
+  final _maxSalaryCtrl = TextEditingController();
 
   final List<String> _jobTypes = ['Full Time', 'Part Time', 'Remote', 'Contract'];
   final List<String> _eduLevels = ['Matric', 'Intermediate', 'BSc / BE', 'MSc / MS', 'PhD'];
@@ -33,6 +35,8 @@ class _JobFormState extends State<_JobForm> {
   void dispose() {
     _skillCtrl.dispose();
     _optSkillCtrl.dispose();
+    _minSalaryCtrl.dispose();
+    _maxSalaryCtrl.dispose();
     super.dispose();
   }
 
@@ -42,7 +46,7 @@ class _JobFormState extends State<_JobForm> {
     
     if (success) {
       Navigator.push(context, MaterialPageRoute(
-        builder: (_) => ChangeNotifierProvider.value(value: vm, child: const MatchResultsScreen())));
+        builder: (_) => MatchResultsScreen()));
     } else if (vm.error != null) {
       ToastHelper.error(context, vm.error!);
     }
@@ -64,27 +68,12 @@ class _JobFormState extends State<_JobForm> {
             child: ListView(
               padding: const EdgeInsets.all(AppSpace.lg),
               children: [
-                // ── Error Banner ─────────────────────
-                if (vm.error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(color: AppColors.red.withOpacity(.08), borderRadius: BorderRadius.circular(12)),
-                      child: Row(children: [
-                        const Icon(Icons.error_outline_rounded, color: AppColors.red, size: 18),
-                        const SizedBox(width: 10),
-                        Expanded(child: Text(vm.error!, style: AppText.body(13, color: AppColors.red))),
-                      ]),
-                    ),
-                  ),
-
-                // ── JOB INFO ─────────────────────────
+                // ── Position Details ───────────────────
                 SectionCard(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     const CardHeader(icon: Icons.work_outline_rounded, iconBg: Colors.white, iconColor: AppColors.accent, title: 'Position Details'),
                     const SizedBox(height: 16),
-                    _InputField(label: 'Job Title (e.g. Flutter Developer)', initial: vm.title, onChanged: (v) => vm.title = v),
+                    _InputField(label: 'Job Title', initial: vm.title, onChanged: (v) => vm.title = v),
                     const SizedBox(height: 12),
                     Row(children: [
                       Expanded(child: _InputField(label: 'Department', initial: vm.department, onChanged: (v) => vm.department = v)),
@@ -94,33 +83,65 @@ class _JobFormState extends State<_JobForm> {
                     const SizedBox(height: 20),
                     Text('Employment Type', style: AppText.label(12)),
                     const SizedBox(height: 10),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(children: _jobTypes.map((t) => Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          label: Text(t), selected: vm.jobType == t,
-                          onSelected: (_) => setState(() => vm.jobType = t),
-                        ),
-                      )).toList()),
-                    ),
+                    Wrap(spacing: 8, children: _jobTypes.map((t) => ChoiceChip(
+                      label: Text(t, style: const TextStyle(fontSize: 12)), 
+                      selected: vm.jobType == t,
+                      onSelected: (_) => setState(() => vm.jobType = t),
+                    )).toList()),
                   ]),
                 ),
 
-                // ── REQUIRED SKILLS ─────────────────
+                // ── Education & Salary ────────────────
+                SectionCard(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const CardHeader(icon: Icons.school_outlined, iconBg: Colors.white, iconColor: AppColors.teal, title: 'Qualifications'),
+                    const SizedBox(height: 16),
+                    Text('Min. Education Level', style: AppText.label(12)),
+                    const SizedBox(height: 10),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(children: _eduLevels.map((e) => Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(e), selected: vm.educationLevel == e,
+                          onSelected: (_) => setState(() => vm.educationLevel = e),
+                        ),
+                      )).toList()),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(children: [
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('Experience (Years)', style: AppText.label(12)),
+                        const SizedBox(height: 8),
+                        Row(children: [
+                          _StepperBtn(icon: Icons.remove, onTap: vm.decrementExp),
+                          Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Text(vm.minExperience.toString(), style: AppText.title(16))),
+                          _StepperBtn(icon: Icons.add, onTap: vm.incrementExp),
+                        ]),
+                      ])),
+                      const SizedBox(width: 12),
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('Salary Range (PKR)', style: AppText.label(12)),
+                        const SizedBox(height: 8),
+                        Row(children: [
+                          Expanded(child: _InputField(label: 'Min', initial: vm.salaryMin.toString(), onChanged: (v) => vm.salaryMin = int.tryParse(v) ?? 0, compact: true)),
+                          const Padding(padding: EdgeInsets.symmetric(horizontal: 4), child: Text('—')),
+                          Expanded(child: _InputField(label: 'Max', initial: vm.salaryMax.toString(), onChanged: (v) => vm.salaryMax = int.tryParse(v) ?? 0, compact: true)),
+                        ]),
+                      ])),
+                    ]),
+                  ]),
+                ),
+
+                // ── Required Skills ───────────────────
                 SectionCard(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     const CardHeader(icon: Icons.bolt_rounded, iconBg: Colors.white, iconColor: AppColors.amber, title: 'Required Skills'),
                     const SizedBox(height: 12),
-                    if (vm.requiredSkills.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Text('Add skills the AI should look for.', style: AppText.caption(12)),
-                      ),
                     Wrap(spacing: 8, runSpacing: 8, children: vm.requiredSkills.map((s) => SkillTag(s, onRemove: () => vm.removeRequiredSkill(s))).toList()),
                     const SizedBox(height: 16),
                     Row(children: [
-                      Expanded(child: _InputField(label: 'Enter a skill...', controller: _skillCtrl, compact: true)),
+                      Expanded(child: _InputField(label: 'Add a mandatory skill...', controller: _skillCtrl, compact: true)),
                       const SizedBox(width: 8),
                       IconButton.filled(
                         onPressed: () {
@@ -133,19 +154,42 @@ class _JobFormState extends State<_JobForm> {
                   ]),
                 ),
 
-                // ── WEIGHTS ────────────────────────
+                // ── Optional Skills ───────────────────
                 SectionCard(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const CardHeader(icon: Icons.tune_rounded, iconBg: Colors.white, iconColor: AppColors.green, title: 'AI Match Weights'),
-                    const SizedBox(height: 6),
-                    Text('Adjust how strictly the AI scores candidates.', style: AppText.caption(11)),
+                    const CardHeader(icon: Icons.auto_awesome_outlined, iconBg: Colors.white, iconColor: AppColors.purple, title: 'Optional / Bonus Skills'),
+                    const SizedBox(height: 12),
+                    Wrap(spacing: 8, runSpacing: 8, children: vm.optionalSkills.map((s) => SkillTag(s, required: false, onRemove: () => vm.removeOptionalSkill(s))).toList()),
                     const SizedBox(height: 16),
-                    _WeightSlider(label: 'Skills Priority', value: vm.skillWeight, color: AppColors.accent, onChanged: vm.setSkillWeight),
-                    _WeightSlider(label: 'Experience Priority', value: vm.experienceWeight, color: AppColors.green, onChanged: null),
+                    Row(children: [
+                      Expanded(child: _InputField(label: 'Add a nice-to-have skill...', controller: _optSkillCtrl, compact: true)),
+                      const SizedBox(width: 8),
+                      IconButton.filled(
+                        style: IconButton.styleFrom(backgroundColor: AppColors.purple),
+                        onPressed: () {
+                          vm.addOptionalSkill(_optSkillCtrl.text.trim());
+                          _optSkillCtrl.clear();
+                        },
+                        icon: const Icon(Icons.add_rounded),
+                      ),
+                    ]),
                   ]),
                 ),
 
-                const SizedBox(height: 100), // Space for bottom button
+                // ── Match Weights ─────────────────────
+                SectionCard(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const CardHeader(icon: Icons.tune_rounded, iconBg: Colors.white, iconColor: AppColors.green, title: 'AI Matching Priorities'),
+                    const SizedBox(height: 6),
+                    Text('Adjust these to tell the AI what matters most.', style: AppText.caption(11)),
+                    const SizedBox(height: 20),
+                    _WeightSlider(label: 'Technical Skills', value: vm.skillWeight, color: AppColors.accent, onChanged: (v) => vm.updateWeights(skill: v)),
+                    _WeightSlider(label: 'Years of Experience', value: vm.experienceWeight, color: AppColors.green, onChanged: (v) => vm.updateWeights(exp: v)),
+                    _WeightSlider(label: 'Education Level', value: vm.educationWeight, color: AppColors.orange, onChanged: (v) => vm.updateWeights(edu: v)),
+                  ]),
+                ),
+
+                const SizedBox(height: 100),
               ],
             ),
           ),
@@ -187,8 +231,18 @@ class _InputField extends StatelessWidget {
   }
 }
 
+class _StepperBtn extends StatelessWidget {
+  final IconData icon; final VoidCallback onTap;
+  const _StepperBtn({required this.icon, required this.onTap});
+  @override
+  Widget build(BuildContext context) => IconButton.outlined(
+    onPressed: onTap, icon: Icon(icon, size: 18),
+    style: IconButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+  );
+}
+
 class _WeightSlider extends StatelessWidget {
-  final String label; final double value; final Color color; final ValueChanged<double>? onChanged;
+  final String label; final double value; final Color color; final ValueChanged<double> onChanged;
   const _WeightSlider({required this.label, required this.value, required this.color, required this.onChanged});
 
   @override
@@ -198,7 +252,10 @@ class _WeightSlider extends StatelessWidget {
         Text(label, style: AppText.label(12)),
         Text('${(value * 100).round()}%', style: AppText.title(13, color: color)),
       ]),
-      Slider(value: value, min: 0.1, max: 0.8, activeColor: color, onChanged: onChanged),
+      Slider(
+        value: value, min: 0.05, max: 0.8, activeColor: color, 
+        onChanged: (v) => onChanged(double.parse(v.toStringAsFixed(2))),
+      ),
     ]);
   }
 }

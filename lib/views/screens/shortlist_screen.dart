@@ -17,8 +17,8 @@ class ShortlistScreen extends StatefulWidget {
 
 class _ShortlistScreenState extends State<ShortlistScreen> {
   int _tabIndex = 0;
-  final _tabs = ['Pending', 'Shortlisted', 'Accepted', 'Rejected'];
-  final _statuses = ['pending', 'shortlisted', 'accepted', 'rejected'];
+  final _tabs = ['Pending', 'Shortlisted', 'Accepted', 'Rejected', 'On Hold'];
+  final _statuses = ['pending', 'shortlisted', 'accepted', 'rejected', 'on_hold'];
 
   @override
   void initState() {
@@ -41,7 +41,7 @@ class _ShortlistScreenState extends State<ShortlistScreen> {
     buffer.writeln('Name,Email,Phone,Experience (yrs),Education,Location,Status,Match Score,Skills');
     for (final c in list) {
       final row = [
-        c.name, c.email, c.phone, c.experienceYears.toString(),
+        c.name, c.email, c.phone, c.experienceYears.toStringAsFixed(1),
         c.education, c.location, c.status,
         c.matchScore?.toStringAsFixed(0) ?? '',
         c.skills.join('; '),
@@ -51,7 +51,7 @@ class _ShortlistScreenState extends State<ShortlistScreen> {
 
     await Clipboard.setData(ClipboardData(text: buffer.toString()));
     if (!context.mounted) return;
-    ToastHelper.success(context, '${list.length} candidates copied to clipboard');
+    ToastHelper.success(context, '${list.length} candidates copied to clipboard (CSV)');
   }
 
   @override
@@ -59,19 +59,19 @@ class _ShortlistScreenState extends State<ShortlistScreen> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppTopBar(
-        title: 'Talent Shortlist',
+        title: 'Talent Pipeline',
         showBack: false,
         actions: [
           IconButton(
             onPressed: () => _exportCsv(context),
-            icon: const Icon(Icons.share_rounded, size: 20),
+            icon: const Icon(Icons.ios_share_rounded, size: 20),
             tooltip: 'Export List',
           ),
           const SizedBox(width: 8),
         ],
       ),
       body: Column(children: [
-        // ── Navigation Tabs ────────────────────
+        // ── Status Filter Tabs ──────────────────
         Container(
           color: AppColors.cardBg,
           child: SingleChildScrollView(
@@ -92,7 +92,7 @@ class _ShortlistScreenState extends State<ShortlistScreen> {
                   selectedColor: AppColors.ink,
                   labelStyle: TextStyle(
                     color: _tabIndex == i ? Colors.white : AppColors.ink2,
-                    fontSize: 12, fontWeight: FontWeight.w600
+                    fontSize: 12, fontWeight: FontWeight.bold
                   ),
                 ),
               )),
@@ -101,7 +101,7 @@ class _ShortlistScreenState extends State<ShortlistScreen> {
         ),
         const Divider(height: 1),
 
-        // ── List Content ───────────────────────
+        // ── List ──────────────────────────────
         Expanded(
           child: Consumer<CandidatesViewModel>(builder: (_, vm, __) {
             if (vm.isLoading) return const Center(child: CircularProgressIndicator());
@@ -113,9 +113,9 @@ class _ShortlistScreenState extends State<ShortlistScreen> {
             final list = vm.filtered;
             if (list.isEmpty) {
               return StandardEmptyView(
-                title: 'No ${_tabs[_tabIndex]} candidates',
-                subtitle: 'Candidates moved to the ${_tabs[_tabIndex].toLowerCase()} stage will appear here.',
-                icon: Icons.group_off_rounded,
+                title: 'No candidates found',
+                subtitle: 'Candidates in the ${_tabs[_tabIndex]} stage will appear here.',
+                icon: Icons.person_search_rounded,
               );
             }
 
@@ -145,30 +145,38 @@ class _ShortlistCard extends StatelessWidget {
     return SectionCard(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          AvatarCircle(candidate.name, size: 44),
-          const SizedBox(width: 12),
+          AvatarCircle(candidate.name, size: 48),
+          const SizedBox(width: 14),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(candidate.name, style: AppText.title(15), maxLines: 1),
-            Text('${candidate.experienceYears.toStringAsFixed(0)}y Exp • ${candidate.educationLevel}', 
-                style: AppText.caption(11)),
+            Text(candidate.name, style: AppText.title(15), maxLines: 1, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 2),
+            Text('${candidate.experienceYears.toStringAsFixed(0)}y Exp · ${candidate.education}', 
+                style: AppText.caption(11), maxLines: 1, overflow: TextOverflow.ellipsis),
           ])),
           if (candidate.matchScore != null) ScorePill(candidate.matchScore!),
         ]),
-        const SizedBox(height: 16),
-        Wrap(spacing: 6, runSpacing: 6, children: candidate.skills.take(3).map((s) => SkillTag(s, required: false)).toList()),
+        
+        if (candidate.skills.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Wrap(spacing: 6, runSpacing: 6, children: candidate.skills.take(4).map((s) => SkillTag(s, required: false)).toList()),
+        ],
+
         const SizedBox(height: 20),
         Row(children: [
           Expanded(child: OutlinedButton(
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CandidateDetailScreen(candidate: candidate))),
-            child: const Text('Details'),
+            style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+            child: const Text('View Profile'),
           )),
-          const SizedBox(width: 10),
-          if (candidate.status == 'pending' || candidate.status == 'shortlisted') ...[
-            _SmallActionBtn(label: 'Accept', color: AppColors.green, onTap: () => _update(context, 'accepted')),
-            const SizedBox(width: 8),
-            _SmallActionBtn(label: 'Reject', color: AppColors.red, onTap: () => _update(context, 'rejected')),
-          ] else
-            _SmallActionBtn(label: 'Reset to Pending', color: AppColors.ink2, onTap: () => _update(context, 'pending')),
+          const SizedBox(width: 8),
+          if (candidate.status != 'accepted') 
+            _ActionIconBtn(icon: Icons.check_circle_outline_rounded, color: AppColors.green, onTap: () => _update(context, 'accepted')),
+          if (candidate.status != 'on_hold')
+            _ActionIconBtn(icon: Icons.pause_circle_outline_rounded, color: Colors.blueAccent, onTap: () => _update(context, 'on_hold')),
+          if (candidate.status != 'rejected')
+            _ActionIconBtn(icon: Icons.highlight_off_rounded, color: AppColors.red, onTap: () => _update(context, 'rejected')),
+          if (candidate.status != 'pending')
+            _ActionIconBtn(icon: Icons.history_rounded, color: AppColors.ink3, onTap: () => _update(context, 'pending')),
         ]),
       ]),
     );
@@ -177,27 +185,25 @@ class _ShortlistCard extends StatelessWidget {
   Future<void> _update(BuildContext context, String status) async {
     final ok = await vm.updateStatus(candidate, status);
     if (context.mounted && ok) {
-      ToastHelper.success(context, '${candidate.name} is now ${status.toUpperCase()}');
+      ToastHelper.success(context, '${candidate.name} is now ${status.replaceAll("_", " ").toUpperCase()}');
     }
   }
 }
 
-class _SmallActionBtn extends StatelessWidget {
-  final String label; final Color color; final VoidCallback onTap;
-  const _SmallActionBtn({required this.label, required this.color, required this.onTap});
+class _ActionIconBtn extends StatelessWidget {
+  final IconData icon; final Color color; final VoidCallback onTap;
+  const _ActionIconBtn({required this.icon, required this.color, required this.onTap});
   @override
-  Widget build(BuildContext context) => Expanded(
-    child: FilledButton(
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(left: 6),
+    child: IconButton.filled(
       onPressed: onTap,
-      style: FilledButton.styleFrom(
-        backgroundColor: color.withOpacity(.1),
+      icon: Icon(icon, size: 20),
+      style: IconButton.styleFrom(
+        backgroundColor: color.withValues(alpha: 0.1),
         foregroundColor: color,
-        side: BorderSide(color: color.withOpacity(.2)),
-        elevation: 0,
-        padding: EdgeInsets.zero,
-        minimumSize: const Size(0, 42),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
-      child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
     ),
   );
 }

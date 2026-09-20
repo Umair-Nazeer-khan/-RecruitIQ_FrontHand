@@ -5,11 +5,6 @@ import 'app_constants.dart';
 import 'toast_helper.dart';
 
 /// App-wide network awareness.
-///
-/// Important: a Wi-Fi/mobile-data connection does not always mean that the
-/// internet is reachable. Therefore API requests still have their own
-/// timeout/network error handling. This class handles the visible connection
-/// state and gives the user a clear message instead of a technical exception.
 class NetworkStatusListener extends StatefulWidget {
   final Widget child;
 
@@ -37,9 +32,7 @@ class _NetworkStatusListenerState extends State<NetworkStatusListener> {
       final result = await _connectivity.checkConnectivity();
       if (!mounted) return;
       _updateState(_isOfflineResult(result), initial: true);
-    } catch (_) {
-      // Do not block app startup if the platform connectivity API fails.
-    }
+    } catch (_) {}
   }
 
   void _onChanged(List<ConnectivityResult> result) {
@@ -56,18 +49,16 @@ class _NetworkStatusListenerState extends State<NetworkStatusListener> {
     final firstCheck = !_hasChecked;
     _hasChecked = true;
 
-    // Only announce transitions. This prevents repeated snackbars when the
-    // operating system sends duplicate connectivity events.
     if (!initial && !firstCheck && offline != wasOffline) {
       if (offline) {
         ToastHelper.global(
-          'No internet connection. Your data is safe; reconnect and try again.',
+          'No internet connection. Your data is safe.',
           type: ToastType.error,
           duration: const Duration(days: 1),
         );
       } else {
         ToastHelper.global(
-          'You are back online. RecruitIQ is ready to continue.',
+          'You are back online.',
           type: ToastType.success,
         );
       }
@@ -96,23 +87,17 @@ class _NetworkStatusListenerState extends State<NetworkStatusListener> {
               child: IgnorePointer(
                 child: Container(
                   margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
                   decoration: BoxDecoration(
                     color: AppColors.red,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: const [
-                      BoxShadow(
-                        blurRadius: 14,
-                        offset: Offset(0, 5),
-                        color: Color(0x22000000),
-                      ),
+                      BoxShadow(blurRadius: 14, offset: Offset(0, 5), color: Color(0x22000000)),
                     ],
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.wifi_off_rounded,
-                          color: Colors.white, size: 18),
+                      const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 18),
                       const SizedBox(width: 9),
                       Expanded(
                         child: Text(

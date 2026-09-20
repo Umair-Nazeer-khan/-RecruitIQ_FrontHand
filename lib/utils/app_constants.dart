@@ -114,7 +114,7 @@ class AppDecor {
         color: filled ? AppColors.logoAqua : AppColors.surface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: filled ? AppColors.teal.withOpacity(.30) : AppColors.border2,
+          color: filled ? AppColors.teal.withValues(alpha: .30) : AppColors.border2,
         ),
       );
 }

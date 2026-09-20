@@ -13,22 +13,31 @@ import '../services/token_storage.dart';
 class DashboardViewModel extends ChangeNotifier {
   bool _isLoading = false;
   List<Candidate> _candidates = [];
+  
   int _totalCVs = 0;
   int _shortlisted = 0;
+  int _accepted = 0;
+  int _rejected = 0;
+  int _pending = 0;
   int _openJobs = 0;
+  
   String? _error;
 
   bool get isLoading => _isLoading;
   List<Candidate> get candidates => _candidates;
   int get totalCVs => _totalCVs;
   int get shortlisted => _shortlisted;
+  int get accepted => _accepted;
+  int get rejected => _rejected;
+  int get pending => _pending;
   int get openJobs => _openJobs;
   String? get error => _error;
 
   List<Candidate> get topCandidates {
+    // Show candidates ranked by match score
     final sorted = [..._candidates]
       ..sort((a, b) => (b.matchScore ?? 0).compareTo(a.matchScore ?? 0));
-    return sorted.take(6).toList();
+    return sorted.toList(); // Return all, let UI handle display
   }
 
   Future<void> loadDashboard() async {
@@ -40,11 +49,18 @@ class DashboardViewModel extends ChangeNotifier {
       final token = await TokenStorage.getAccessToken();
       if (token == null) throw Exception('Your session has expired. Please log in again.');
 
+      // 1. Fetch statistics from server
+      final stats = await ApiService.getStats(token);
+      _totalCVs = stats['total_cvs'] ?? 0;
+      _shortlisted = stats['shortlisted'] ?? 0;
+      _accepted = stats['accepted'] ?? 0;
+      _rejected = stats['rejected'] ?? 0;
+      _pending = stats['pending'] ?? 0;
+
+      // 2. Fetch candidates list for "Recent" section
       _candidates = await ApiService.getCandidates(token);
-      _totalCVs = _candidates.length;
-      _shortlisted = _candidates.where((c) => c.status == 'shortlisted').length;
       
-      // Fetch jobs to show actual "Open Jobs" count
+      // 3. Fetch jobs to show actual "Open Jobs" count
       final jobs = await ApiService.getJobs(token);
       _openJobs = jobs.length;
     } catch (e) {
@@ -96,7 +112,6 @@ class UploadViewModel extends ChangeNotifier {
       final pickedFile = result.files.first;
       var bytes = pickedFile.bytes;
 
-      // Handle async cloud download race conditions
       if ((bytes == null || bytes.isEmpty) && pickedFile.path != null) {
         for (var attempt = 0; attempt < 8; attempt++) {
           try {
@@ -119,7 +134,6 @@ class UploadViewModel extends ChangeNotifier {
 
       _parsedCandidate = await ApiService.uploadResume(bytes, pickedFile.name, token);
 
-      // COMMITTEE FIX: Sync local list immediately for better UX
       _files.insert(0, {
         'name': pickedFile.name,
         'type': pickedFile.extension?.toUpperCase() ?? 'PDF',

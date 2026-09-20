@@ -36,7 +36,7 @@ class _UploadScreenState extends State<UploadScreen> {
             child: ListView(
               padding: const EdgeInsets.all(AppSpace.lg),
               children: [
-                // ── Drop zone (single, consolidated upload action) ──
+                // ── Drop zone ──
                 _UploadZone(
                   isUploading: vm.isUploading,
                   isParsing: vm.isParsing,
@@ -49,12 +49,12 @@ class _UploadScreenState extends State<UploadScreen> {
                   Container(
                     padding: const EdgeInsets.all(AppSpace.md),
                     decoration: BoxDecoration(
-                      color: AppColors.red.withOpacity(0.08),
+                      color: AppColors.red.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(AppRadius.sm),
-                      border: Border.all(color: AppColors.red.withOpacity(0.2)),
+                      border: Border.all(color: AppColors.red.withValues(alpha: 0.2)),
                     ),
                     child: Row(children: [
-                      Icon(Icons.error_outline_rounded,
+                      const Icon(Icons.error_outline_rounded,
                           color: AppColors.red, size: 18),
                       const SizedBox(width: AppSpace.sm),
                       Expanded(
@@ -100,7 +100,6 @@ class _UploadScreenState extends State<UploadScreen> {
   }
 }
 
-// ── Upload Zone widget — the single tap target for uploading ──
 class _UploadZone extends StatelessWidget {
   final bool isUploading;
   final bool isParsing;
@@ -125,7 +124,7 @@ class _UploadZone extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.xl),
           border: Border.all(
               color:
-                  busy ? AppColors.accent : AppColors.accent.withOpacity(0.25),
+                  busy ? AppColors.accent : AppColors.accent.withValues(alpha: 0.25),
               width: 1.5),
           boxShadow: const [
             BoxShadow(
@@ -151,8 +150,8 @@ class _UploadZone extends StatelessWidget {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            AppColors.accent.withOpacity(0.12),
-                            AppColors.amber.withOpacity(0.12)
+                            AppColors.accent.withValues(alpha: 0.12),
+                            AppColors.amber.withValues(alpha: 0.12)
                           ]),
                       borderRadius: BorderRadius.circular(AppRadius.lg)),
                   child: const Icon(Icons.upload_rounded,
@@ -177,7 +176,7 @@ class _UploadZone extends StatelessWidget {
                                   color: AppColors.surface,
                                   borderRadius:
                                       BorderRadius.circular(AppRadius.sm),
-                                  border: Border.all(color: AppColors.border2)),
+                                  border: Border.all(color: AppColors.divider)),
                               child: Text(f, style: AppText.label(11)),
                             ))
                         .toList()),
@@ -187,7 +186,6 @@ class _UploadZone extends StatelessWidget {
   }
 }
 
-// ── File item row ────────────────────────────
 class _FileItem extends StatelessWidget {
   final Map<String, String> file;
   const _FileItem({required this.file});
@@ -220,8 +218,8 @@ class _FileItem extends StatelessWidget {
           height: 40,
           decoration: BoxDecoration(
               color: isPDF
-                  ? AppColors.red.withOpacity(0.1)
-                  : AppColors.accent.withOpacity(0.1),
+                  ? AppColors.red.withValues(alpha: 0.1)
+                  : AppColors.accent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppRadius.sm)),
           child: Icon(_icon,
               size: 19, color: isPDF ? AppColors.red : AppColors.accent),

@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../utils/app_constants.dart';
 import '../../utils/toast_helper.dart';
-import 'dashboard_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -39,7 +38,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (success) {
       ToastHelper.success(context, 'Account created successfully!');
-      // SECURE NAVIGATION: Clear backstack so user can't "back" into registration
       Navigator.pushNamedAndRemoveUntil(context, '/dashboard', (route) => false);
     } else if (vm.errorMessage != null) {
       ToastHelper.error(context, vm.errorMessage!);
@@ -63,9 +61,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Container(
                 padding: const EdgeInsets.fromLTRB(28, 28, 28, 28),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.035),
+                  color: Colors.white.withValues(alpha: 0.035),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -78,7 +76,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             Navigator.pop(context);
                           },
                           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
-                          style: IconButton.styleFrom(backgroundColor: Colors.white.withOpacity(0.06)),
+                          style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: 0.06)),
                         ),
                       ],
                     ),
@@ -170,7 +168,7 @@ class _Glow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
       width: size, height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [color.withOpacity(0.1), Colors.transparent])));
+      decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [color.withValues(alpha: 0.1), Colors.transparent])));
 }
 
 class _ProField extends StatelessWidget {
@@ -202,14 +200,14 @@ class _ProField extends StatelessWidget {
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
+            color: Colors.white.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(13),
-            border: Border.all(color: hasError ? AppColors.red.withOpacity(0.5) : Colors.white.withOpacity(0.09)),
+            border: Border.all(color: hasError ? AppColors.red.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.09)),
           ),
           child: Row(
             children: [
               const SizedBox(width: 14),
-              Icon(icon, size: 18, color: hasError ? AppColors.red.withOpacity(0.6) : Colors.white38),
+              Icon(icon, size: 18, color: hasError ? AppColors.red.withValues(alpha: 0.6) : Colors.white38),
               const SizedBox(width: 10),
               Expanded(
                 child: TextField(

@@ -67,6 +67,7 @@ class WorkExperience {
       bullets: List<String>.from(json['bullets'] ??
           json['bullet_points'] ??
           json['responsibilities'] ??
+          json['details_list'] ??
           []),
     );
   }
@@ -85,18 +86,17 @@ class ProjectItem {
   final String description;
   final List<String> techStack;
 
-  ProjectItem({
-    required this.name,
-    required this.description,
-    this.techStack = const [],
-  });
+  ProjectItem(
+      {required this.name,
+      required this.description,
+      this.techStack = const []});
 
   factory ProjectItem.fromJson(Map<String, dynamic> json) {
     return ProjectItem(
       name: json['name'] ?? json['title'] ?? '',
       description: json['description'] ?? '',
       techStack: List<String>.from(
-          json['tech_stack'] ?? json['technologies'] ?? []),
+          json['tech_stack'] ?? json['technologies'] ?? json['tech'] ?? []),
     );
   }
 
@@ -112,17 +112,24 @@ class EducationItem {
   final String degree;
   final String duration;
 
-  EducationItem({
-    required this.institution,
-    required this.degree,
-    required this.duration,
-  });
+  EducationItem(
+      {required this.institution,
+      required this.degree,
+      required this.duration});
 
   factory EducationItem.fromJson(Map<String, dynamic> json) {
     return EducationItem(
-      institution: json['institution'] ?? json['school'] ?? json['university'] ?? '',
-      degree: json['degree'] ?? json['education'] ?? json['qualification'] ?? '',
-      duration: json['duration'] ?? json['period'] ?? '',
+      institution: json['institution'] ??
+          json['school'] ??
+          json['university'] ??
+          json['college'] ??
+          '',
+      degree: json['degree'] ??
+          json['education'] ??
+          json['qualification'] ??
+          json['major'] ??
+          '',
+      duration: json['duration'] ?? json['period'] ?? json['year'] ?? '',
     );
   }
 
@@ -141,17 +148,17 @@ class Candidate {
   final String location;
   final double experienceYears;
   final String summary;
-  final String education; // Display string
+  final String education; // Display summary string
   final String educationLevel;
   final List<EducationItem> educationHistory;
-  final List<String> skills; // Fallback
-  final Map<String, List<String>> technicalSkills;
+  final List<String> skills; // Flat list for display
+  final Map<String, List<String>> technicalSkills; // Categorized map
   final List<String> softSkills;
   final List<String> languages;
   final List<ProjectItem> projects;
-  final List<WorkExperience> workHistory;
   final List<String> certifications;
   final List<String> awards;
+  final List<WorkExperience> workHistory;
   final String? additionalInfo;
   final String originalName;
   final String? resumeFileUrl;
@@ -181,9 +188,9 @@ class Candidate {
     this.softSkills = const [],
     this.languages = const [],
     this.projects = const [],
-    this.workHistory = const [],
     this.certifications = const [],
     this.awards = const [],
+    required this.workHistory,
     this.additionalInfo,
     required this.originalName,
     this.resumeFileUrl,
@@ -199,47 +206,65 @@ class Candidate {
   });
 
   factory Candidate.fromJson(Map<String, dynamic> json) {
+    // 1. Technical Skills Categorization
     final techMap = <String, List<String>>{};
     if (json['technical_skills'] is Map) {
       (json['technical_skills'] as Map).forEach((key, value) {
-        techMap[key.toString()] = List<String>.from(value is List ? value : []);
+        if (value is List) {
+          techMap[key.toString()] = List<String>.from(value);
+        }
       });
     } else if (json['skills'] is List) {
       techMap['Skills'] = List<String>.from(json['skills']);
     }
 
-    final eduList = (json['education_history'] ?? json['education'] ?? []) as List;
-    final workList = (json['work_experience'] ?? json['work_history'] ?? []) as List;
+    // 2. Derive Flat Skills List
+    final flatSkills = List<String>.from(json['skills'] ?? []);
+    if (flatSkills.isEmpty && techMap.isNotEmpty) {
+      techMap.values.forEach((list) => flatSkills.addAll(list));
+    }
 
+    // 3. Lists parsing
+    final eduData = json['education_history'] ?? json['education'] ?? json['education_entries'] ?? [];
+    final eduList = (eduData is List) ? eduData : [];
+    
+    final workData = json['work_experience'] ?? json['work_history'] ?? [];
+    final workList = (workData is List) ? workData : [];
+    
+    final projData = json['projects'] ?? [];
+    final projList = (projData is List) ? projData : [];
+
+    // 4. Resolve display education string
     String eduStr = json['education'] is String ? json['education'] : '';
     if (eduStr.isEmpty && eduList.isNotEmpty) {
       final first = EducationItem.fromJson(eduList.first is Map ? eduList.first as Map<String, dynamic> : {});
-      eduStr = '${first.degree} @ ${first.institution}';
+      eduStr = '${first.degree}${first.institution.isNotEmpty ? " @ ${first.institution}" : ""}';
     }
 
     return Candidate(
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
       email: json['email'] ?? '',
-      phone: json['phone'] ?? '',
-      location: json['location'] ?? '',
+      phone: json['phone'] ?? json['mobile'] ?? '',
+      location: json['location'] ?? json['address'] ?? '',
       experienceYears: (json['experience_years'] as num?)?.toDouble() ?? 0,
-      summary: json['summary'] ?? json['objective'] ?? '',
+      summary: json['summary'] ?? json['objective'] ?? json['profile'] ?? '',
       education: eduStr,
       educationLevel: json['education_level'] ?? '',
-      educationHistory: eduList.map((e) => EducationItem.fromJson(e)).toList(),
-      skills: List<String>.from(json['skills'] ?? []),
+      educationHistory: eduList.map((e) => EducationItem.fromJson(e is Map ? Map<String, dynamic>.from(e) : {})).toList(),
+      skills: flatSkills,
       technicalSkills: techMap,
       softSkills: List<String>.from(json['soft_skills'] ?? []),
       languages: List<String>.from(json['languages'] ?? []),
-      projects: (json['projects'] as List? ?? []).map((e) => ProjectItem.fromJson(e)).toList(),
-      workHistory: workList.map((e) => WorkExperience.fromJson(e)).toList(),
-      certifications: List<String>.from(json['certifications'] ?? []),
-      awards: List<String>.from(json['awards'] ?? []),
+      projects: projList.map((e) => ProjectItem.fromJson(e is Map ? Map<String, dynamic>.from(e) : {})).toList(),
+      workHistory: workList.map((e) => WorkExperience.fromJson(e is Map ? Map<String, dynamic>.from(e) : {})).toList(),
+      certifications: List<String>.from(json['certifications'] ?? json['certificates'] ?? []),
+      awards: List<String>.from(json['awards'] ?? json['honors'] ?? []),
       additionalInfo: json['additional_information']?.toString() ?? json['additional_info']?.toString(),
       originalName: json['original_name'] ?? '',
-      resumeFileUrl: json['resume_file_url'],
-      matchScore: (json['match_score'] as num?)?.toDouble() ?? (json['final_score'] as num?)?.toDouble(),
+      resumeFileUrl: json['resume_file_url'] ?? json['resume_url'],
+      matchScore: (json['match_score'] as num?)?.toDouble() ??
+          (json['score'] as num?)?.toDouble() ?? (json['final_score'] as num?)?.toDouble(),
       skillScore: (json['skill_score'] as num?)?.toDouble(),
       experienceScore: (json['experience_score'] as num?)?.toDouble(),
       educationScore: (json['education_score'] as num?)?.toDouble(),
@@ -326,17 +351,17 @@ class JobRequirement {
 
   factory JobRequirement.fromJson(Map<String, dynamic> json) {
     return JobRequirement(
-      id: json['id'],
+      id: json['id'] is int ? json['id'] : int.tryParse(json['id']?.toString() ?? ''),
       title: json['title'] ?? '',
       department: json['department'] ?? '',
       location: json['location'] ?? '',
       jobType: json['job_type'] ?? 'full_time',
       requiredSkills: List<String>.from(json['required_skills'] ?? []),
       optionalSkills: List<String>.from(json['optional_skills'] ?? []),
-      minExperience: json['min_experience'] ?? 0,
+      minExperience: (json['min_experience'] as num?)?.toInt() ?? 0,
       educationLevel: json['education_level'] ?? 'BSc / BE',
-      salaryMin: json['salary_min'],
-      salaryMax: json['salary_max'],
+      salaryMin: (json['salary_min'] as num?)?.toInt(),
+      salaryMax: (json['salary_max'] as num?)?.toInt(),
       skillWeight: (json['skill_weight'] as num?)?.toDouble() ?? 0.5,
       experienceWeight: (json['experience_weight'] as num?)?.toDouble() ?? 0.3,
       educationWeight: (json['education_weight'] as num?)?.toDouble() ?? 0.2,
@@ -368,7 +393,7 @@ class MatchResult {
       partialMatch: stats['partial'] ?? 0,
       noMatch: stats['no_match'] ?? 0,
       rankedCandidates:
-          results.map((e) => Candidate.fromMatchResult(e)).toList(),
+          results.map((e) => Candidate.fromMatchResult(Map<String, dynamic>.from(e))).toList(),
     );
   }
 }
