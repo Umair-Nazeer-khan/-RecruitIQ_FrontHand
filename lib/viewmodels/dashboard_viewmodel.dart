@@ -28,7 +28,7 @@ class DashboardViewModel extends ChangeNotifier {
   List<Candidate> get topCandidates {
     final sorted = [..._candidates]
       ..sort((a, b) => (b.matchScore ?? 0).compareTo(a.matchScore ?? 0));
-    return sorted.take(4).toList();
+    return sorted.take(6).toList();
   }
 
   Future<void> loadDashboard() async {
@@ -38,17 +38,17 @@ class DashboardViewModel extends ChangeNotifier {
 
     try {
       final token = await TokenStorage.getAccessToken();
-      if (token == null) throw Exception('Not authenticated');
+      if (token == null) throw Exception('Your session has expired. Please log in again.');
 
       _candidates = await ApiService.getCandidates(token);
       _totalCVs = _candidates.length;
       _shortlisted = _candidates.where((c) => c.status == 'shortlisted').length;
-      _openJobs =
-          0; // TODO: wire to a real "open jobs count" endpoint when available
+      
+      // Fetch jobs to show actual "Open Jobs" count
+      final jobs = await ApiService.getJobs(token);
+      _openJobs = jobs.length;
     } catch (e) {
-      debugPrint('Failed to load dashboard: $e');
-      _error = ErrorMessage.from(e,
-          fallback: 'Could not load dashboard. Please try again.');
+      _error = ErrorMessage.from(e, fallback: 'Unable to sync dashboard data.');
     }
 
     _isLoading = false;
@@ -58,7 +58,6 @@ class DashboardViewModel extends ChangeNotifier {
 
 // ══════════════════════════════════════════════
 //  UPLOAD VIEWMODEL
-//  file_picker 8.x API — uses PlatformFile
 // ══════════════════════════════════════════════
 class UploadViewModel extends ChangeNotifier {
   bool _isUploading = false;
@@ -74,8 +73,6 @@ class UploadViewModel extends ChangeNotifier {
   List<Map<String, String>> get files => _files;
 
   void loadFiles() {
-    // No dedicated "uploaded files" backend endpoint yet.
-    // This list is populated as files are picked/parsed during this session.
     notifyListeners();
   }
 
@@ -85,9 +82,6 @@ class UploadViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Step 1: Pick file — load bytes directly so this works reliably
-      // for cloud-backed sources (e.g. Google Drive) where the returned
-      // path can be unreadable or point to 0 bytes.
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'docx', 'doc', 'txt'],
@@ -99,56 +93,47 @@ class UploadViewModel extends ChangeNotifier {
         return null;
       }
 
-      // Step 2: Get file bytes — try the direct bytes first, then read
-      // from the cached path, retrying briefly if it comes back empty.
-      // This handles a known file_picker race condition with cloud
-      // sources (e.g. Google Drive): Android copies the remote file into
-      // a local cache file asynchronously, and if we read it too early
-      // we get a 0-byte placeholder before the download finishes.
       final pickedFile = result.files.first;
       var bytes = pickedFile.bytes;
 
+      // Handle async cloud download race conditions
       if ((bytes == null || bytes.isEmpty) && pickedFile.path != null) {
-        for (var attempt = 0; attempt < 12; attempt++) {
+        for (var attempt = 0; attempt < 8; attempt++) {
           try {
             final read = await File(pickedFile.path!).readAsBytes();
-            if (read.isNotEmpty) {
-              bytes = read;
-              break;
-            }
-          } catch (_) {
-            // keep retrying until attempts run out
-          }
+            if (read.isNotEmpty) { bytes = read; break; }
+          } catch (_) {}
           await Future.delayed(const Duration(milliseconds: 500));
         }
       }
 
       if (bytes == null || bytes.isEmpty) {
-        _error = 'Could not read the selected file — it may still be '
-            'downloading from a cloud source. Please save it to your '
-            'phone\'s local storage first, then try picking it again.';
-        _isUploading = false;
-        notifyListeners();
-        return null;
+        throw Exception('Could not read the file. Please ensure it is fully downloaded to your device.');
       }
 
-      // Step 3: Parse with AI via backend
       _isParsing = true;
       notifyListeners();
 
       final token = await TokenStorage.getAccessToken();
-      if (token == null) throw Exception('Not authenticated');
+      if (token == null) throw Exception('Authentication failed. Please log in again.');
 
-      _parsedCandidate =
-          await ApiService.uploadResume(bytes, pickedFile.name, token);
+      _parsedCandidate = await ApiService.uploadResume(bytes, pickedFile.name, token);
+
+      // COMMITTEE FIX: Sync local list immediately for better UX
+      _files.insert(0, {
+        'name': pickedFile.name,
+        'type': pickedFile.extension?.toUpperCase() ?? 'PDF',
+        'size': '${(bytes.length / 1024).toStringAsFixed(0)} KB',
+        'time': 'Just now',
+        'status': 'parsed',
+      });
 
       _isUploading = false;
       _isParsing = false;
       notifyListeners();
       return _parsedCandidate;
     } catch (e) {
-      _error = ErrorMessage.from(e,
-          fallback: 'Resume could not be processed. Please try again.');
+      _error = ErrorMessage.from(e, fallback: 'Resume parsing failed.');
       _isUploading = false;
       _isParsing = false;
       notifyListeners();
@@ -180,9 +165,6 @@ class CandidatesViewModel extends ChangeNotifier {
     return _all.where((c) => c.status == _filter).toList();
   }
 
-  int countByStatus(String status) =>
-      _all.where((c) => c.status == status).length;
-
   Future<void> load() async {
     _isLoading = true;
     _loadError = null;
@@ -190,12 +172,10 @@ class CandidatesViewModel extends ChangeNotifier {
 
     try {
       final token = await TokenStorage.getAccessToken();
-      if (token == null) throw Exception('Not authenticated');
+      if (token == null) throw Exception('Session expired.');
       _all = await ApiService.getCandidates(token);
     } catch (e) {
-      debugPrint('Failed to load candidates: $e');
-      _loadError = ErrorMessage.from(e,
-          fallback: 'Could not load candidates. Please try again.');
+      _loadError = ErrorMessage.from(e, fallback: 'Unable to load candidates.');
     }
 
     _isLoading = false;
@@ -210,20 +190,14 @@ class CandidatesViewModel extends ChangeNotifier {
   Future<bool> updateStatus(Candidate candidate, String newStatus) async {
     try {
       final token = await TokenStorage.getAccessToken();
-      if (token == null) throw Exception('Not authenticated');
+      if (token == null) return false;
 
       await ApiService.updateCandidateStatus(candidate.id, newStatus, token);
-      // NOTE: FirebaseService().updateCandidateStatus(...) is also available
-      // if you want statuses mirrored to Firebase as well — not called here
-      // since FastAPI is currently the single source of truth.
       candidate.status = newStatus;
       notifyListeners();
       return true;
     } catch (e) {
       debugPrint('Failed to update status: $e');
-      _loadError = ErrorMessage.from(e,
-          fallback: 'Candidate status could not be updated. Please try again.');
-      notifyListeners();
       return false;
     }
   }

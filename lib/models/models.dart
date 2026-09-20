@@ -1,13 +1,6 @@
 // lib/models/models.dart
-// ─────────────────────────────────────────────────────────────
-//  All data models — match the Django backend JSON exactly.
-// ─────────────────────────────────────────────────────────────
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// ══════════════════════════════════════════════
-//  USER MODEL
-// ══════════════════════════════════════════════
 class UserModel {
   final String uid;
   final String email;
@@ -48,78 +41,98 @@ class UserModel {
       'created_at': Timestamp.fromDate(createdAt),
     };
   }
-
-  factory UserModel.fromFirestore(Map<String, dynamic> json, String uid) {
-    return UserModel(
-      uid: uid,
-      email: json['email'] ?? '',
-      name: json['name'] ?? '',
-      role: json['role'] ?? 'hr_manager',
-      fcmToken: json['fcm_token'],
-      createdAt: json['created_at'] is Timestamp
-          ? (json['created_at'] as Timestamp).toDate()
-          : DateTime.tryParse(json['created_at']?.toString() ?? '') ??
-              DateTime.now(),
-    );
-  }
 }
 
-// ══════════════════════════════════════════════
-//  WORK EXPERIENCE MODEL
-// ══════════════════════════════════════════════
 class WorkExperience {
   final String company;
   final String role;
   final String duration;
   final String? description;
+  final List<String> bullets;
 
   WorkExperience({
     required this.company,
     required this.role,
     required this.duration,
     this.description,
+    this.bullets = const [],
   });
 
   factory WorkExperience.fromJson(Map<String, dynamic> json) {
     return WorkExperience(
-      company: json['company'] ?? json['details'] ?? '',
-      role: json['role'] ?? '',
-      duration: json['duration'] ?? '',
-      description: json['description'],
+      company: json['company'] ?? json['details'] ?? json['organization'] ?? '',
+      role: json['role'] ?? json['designation'] ?? json['title'] ?? '',
+      duration: json['duration'] ?? json['period'] ?? json['date_range'] ?? '',
+      description: json['description'] ?? json['summary'],
+      bullets: List<String>.from(json['bullets'] ??
+          json['bullet_points'] ??
+          json['responsibilities'] ??
+          []),
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'company': company,
-      'role': role,
-      'duration': duration,
-      'description': description,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+        'company': company,
+        'role': role,
+        'duration': duration,
+        'description': description,
+        'bullets': bullets,
+      };
 }
 
-// ══════════════════════════════════════════════
-//  PROJECT MODEL
-// ══════════════════════════════════════════════
 class ProjectItem {
   final String name;
   final String description;
+  final List<String> techStack;
 
-  ProjectItem({required this.name, required this.description});
+  ProjectItem({
+    required this.name,
+    required this.description,
+    this.techStack = const [],
+  });
 
   factory ProjectItem.fromJson(Map<String, dynamic> json) {
     return ProjectItem(
-      name: json['name'] ?? '',
+      name: json['name'] ?? json['title'] ?? '',
       description: json['description'] ?? '',
+      techStack: List<String>.from(
+          json['tech_stack'] ?? json['technologies'] ?? []),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'description': description,
+        'tech_stack': techStack,
+      };
 }
 
-// ══════════════════════════════════════════════
-//  CANDIDATE MODEL
-//  Matches Django CandidateSerializer exactly
-// ══════════════════════════════════════════════
+class EducationItem {
+  final String institution;
+  final String degree;
+  final String duration;
+
+  EducationItem({
+    required this.institution,
+    required this.degree,
+    required this.duration,
+  });
+
+  factory EducationItem.fromJson(Map<String, dynamic> json) {
+    return EducationItem(
+      institution: json['institution'] ?? json['school'] ?? json['university'] ?? '',
+      degree: json['degree'] ?? json['education'] ?? json['qualification'] ?? '',
+      duration: json['duration'] ?? json['period'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'institution': institution,
+        'degree': degree,
+        'duration': duration,
+      };
+}
+
 class Candidate {
   final int id;
   final String name;
@@ -127,12 +140,19 @@ class Candidate {
   final String phone;
   final String location;
   final double experienceYears;
-  final String education;
+  final String summary;
+  final String education; // Display string
   final String educationLevel;
-  final List<String> skills;
+  final List<EducationItem> educationHistory;
+  final List<String> skills; // Fallback
+  final Map<String, List<String>> technicalSkills;
+  final List<String> softSkills;
   final List<String> languages;
   final List<ProjectItem> projects;
   final List<WorkExperience> workHistory;
+  final List<String> certifications;
+  final List<String> awards;
+  final String? additionalInfo;
   final String originalName;
   final String? resumeFileUrl;
   double? matchScore;
@@ -152,12 +172,19 @@ class Candidate {
     required this.phone,
     required this.location,
     required this.experienceYears,
-    required this.education,
-    required this.educationLevel,
-    required this.skills,
+    this.summary = '',
+    this.education = '',
+    this.educationLevel = '',
+    this.educationHistory = const [],
+    this.skills = const [],
+    this.technicalSkills = const {},
+    this.softSkills = const [],
     this.languages = const [],
     this.projects = const [],
-    required this.workHistory,
+    this.workHistory = const [],
+    this.certifications = const [],
+    this.awards = const [],
+    this.additionalInfo,
     required this.originalName,
     this.resumeFileUrl,
     this.matchScore,
@@ -171,8 +198,25 @@ class Candidate {
     required this.createdAt,
   });
 
-  // ── Convert backend JSON → Dart object ─────────────────────
   factory Candidate.fromJson(Map<String, dynamic> json) {
+    final techMap = <String, List<String>>{};
+    if (json['technical_skills'] is Map) {
+      (json['technical_skills'] as Map).forEach((key, value) {
+        techMap[key.toString()] = List<String>.from(value is List ? value : []);
+      });
+    } else if (json['skills'] is List) {
+      techMap['Skills'] = List<String>.from(json['skills']);
+    }
+
+    final eduList = (json['education_history'] ?? json['education'] ?? []) as List;
+    final workList = (json['work_experience'] ?? json['work_history'] ?? []) as List;
+
+    String eduStr = json['education'] is String ? json['education'] : '';
+    if (eduStr.isEmpty && eduList.isNotEmpty) {
+      final first = EducationItem.fromJson(eduList.first is Map ? eduList.first as Map<String, dynamic> : {});
+      eduStr = '${first.degree} @ ${first.institution}';
+    }
+
     return Candidate(
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
@@ -180,92 +224,54 @@ class Candidate {
       phone: json['phone'] ?? '',
       location: json['location'] ?? '',
       experienceYears: (json['experience_years'] as num?)?.toDouble() ?? 0,
-      education: json['education'] ?? '',
+      summary: json['summary'] ?? json['objective'] ?? '',
+      education: eduStr,
       educationLevel: json['education_level'] ?? '',
+      educationHistory: eduList.map((e) => EducationItem.fromJson(e)).toList(),
       skills: List<String>.from(json['skills'] ?? []),
+      technicalSkills: techMap,
+      softSkills: List<String>.from(json['soft_skills'] ?? []),
       languages: List<String>.from(json['languages'] ?? []),
-      projects: (json['projects'] as List? ?? [])
-          .map((e) => ProjectItem.fromJson(e))
-          .toList(),
-      workHistory: (json['work_history'] as List? ?? [])
-          .map((e) => WorkExperience.fromJson(e))
-          .toList(),
+      projects: (json['projects'] as List? ?? []).map((e) => ProjectItem.fromJson(e)).toList(),
+      workHistory: workList.map((e) => WorkExperience.fromJson(e)).toList(),
+      certifications: List<String>.from(json['certifications'] ?? []),
+      awards: List<String>.from(json['awards'] ?? []),
+      additionalInfo: json['additional_information']?.toString() ?? json['additional_info']?.toString(),
       originalName: json['original_name'] ?? '',
       resumeFileUrl: json['resume_file_url'],
-      matchScore: (json['match_score'] as num?)?.toDouble(),
+      matchScore: (json['match_score'] as num?)?.toDouble() ?? (json['final_score'] as num?)?.toDouble(),
       skillScore: (json['skill_score'] as num?)?.toDouble(),
       experienceScore: (json['experience_score'] as num?)?.toDouble(),
       educationScore: (json['education_score'] as num?)?.toDouble(),
-      missingSkills: json['missing_skills'] != null
-          ? List<String>.from(json['missing_skills'])
-          : null,
-      scoreExplanation: json['score_explanation'],
+      missingSkills: json['missing_skills'] != null ? List<String>.from(json['missing_skills']) : null,
+      scoreExplanation: json['score_explanation'] ?? json['explanation'],
       status: json['status'] ?? 'pending',
       hrNotes: json['hr_notes'],
       createdAt: json['created_at'] is Timestamp
           ? (json['created_at'] as Timestamp).toDate()
-          : DateTime.tryParse(json['created_at']?.toString() ?? '') ??
-              DateTime.now(),
+          : DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
     );
   }
 
-  // ── Convert from /matching/match/ result format ────────────
-  // (slightly different field names than CandidateSerializer)
   factory Candidate.fromMatchResult(Map<String, dynamic> json) {
-    return Candidate(
-      id: json['candidate_id'] ?? 0,
-      name: json['candidate_name'] ?? '',
-      email: json['email'] ?? '',
-      phone: json['phone'] ?? '',
-      location: json['location'] ?? '',
-      experienceYears: (json['experience_years'] as num?)?.toDouble() ?? 0,
-      education: '',
-      educationLevel: json['education_level'] ?? '',
-      skills: List<String>.from(json['skills'] ?? []),
-      workHistory: [],
-      originalName: '',
-      matchScore: (json['final_score'] as num?)?.toDouble(),
-      skillScore: (json['skill_score'] as num?)?.toDouble(),
-      experienceScore: (json['experience_score'] as num?)?.toDouble(),
-      educationScore: (json['education_score'] as num?)?.toDouble(),
-      missingSkills: json['missing_skills'] != null
-          ? List<String>.from(json['missing_skills'])
-          : null,
-      scoreExplanation: json['explanation'],
-      status: json['status'] ?? 'pending',
-      createdAt: DateTime.now(),
-    );
+    return Candidate.fromJson({
+      ...json,
+      if (json.containsKey('candidate_id')) 'id': json['candidate_id'],
+      if (json.containsKey('candidate_name')) 'name': json['candidate_name'],
+    });
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'email': email,
-      'phone': phone,
-      'location': location,
-      'experience_years': experienceYears,
-      'education': education,
-      'education_level': educationLevel,
-      'skills': skills,
-      'work_history': workHistory.map((e) => e.toJson()).toList(),
-      'original_name': originalName,
-      'match_score': matchScore,
-      'skill_score': skillScore,
-      'experience_score': experienceScore,
-      'education_score': educationScore,
-      'missing_skills': missingSkills,
-      'score_explanation': scoreExplanation,
-      'status': status,
-      'hr_notes': hrNotes,
-      'created_at': Timestamp.fromDate(createdAt),
-    };
-  }
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'email': email,
+        'phone': phone,
+        'location': location,
+        'status': status,
+        'created_at': Timestamp.fromDate(createdAt),
+      };
 }
 
-// ══════════════════════════════════════════════
-//  JOB MODEL
-// ══════════════════════════════════════════════
 class JobRequirement {
   final int? id;
   final String title;
@@ -299,7 +305,6 @@ class JobRequirement {
     this.educationWeight = 0.2,
   });
 
-  // ── For POST /matching/match/  (uses job_type as snake_case key names) ──
   Map<String, dynamic> toMatchJson() => {
         if (id != null) 'job_id': id,
         'title': title,
@@ -317,7 +322,6 @@ class JobRequirement {
         'education_weight': educationWeight,
       };
 
-  // ── For POST /jobs/  (create job posting) ──
   Map<String, dynamic> toJson() => toMatchJson();
 
   factory JobRequirement.fromJson(Map<String, dynamic> json) {
@@ -340,9 +344,6 @@ class JobRequirement {
   }
 }
 
-// ══════════════════════════════════════════════
-//  MATCH RESULT MODEL
-// ══════════════════════════════════════════════
 class MatchResult {
   final int totalScanned;
   final int goodMatch;
@@ -358,7 +359,6 @@ class MatchResult {
     required this.rankedCandidates,
   });
 
-  // ── Matches the exact response from POST /matching/match/ ──
   factory MatchResult.fromJson(Map<String, dynamic> json) {
     final stats = json['stats'] ?? {};
     final List results = json['results'] ?? [];

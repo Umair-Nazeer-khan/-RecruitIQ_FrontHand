@@ -18,19 +18,47 @@ final rootScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // ── PREVENT RED SCREEN CRASHES (Professional Fallback) ──────
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Material(
+      color: AppColors.surface,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.sentiment_very_dissatisfied_rounded, 
+                  color: AppColors.red, size: 48),
+              const SizedBox(height: 16),
+              Text('Application Error', style: AppText.title(18)),
+              const SizedBox(height: 8),
+              const Text(
+                'Something unexpected happened in the UI layout. '
+                'Please restart the app or go back.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: AppColors.ink3),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => rootScaffoldMessengerKey.currentState?.clearSnackBars(),
+                child: const Text('Dismiss'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  };
+
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
   ));
 
-  // Do not lock web. On phones we keep portrait as the default,
-  // while the responsive UI also works when orientation changes.
   if (!kIsWeb) {
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
     ]);
   }
 
@@ -56,7 +84,6 @@ class RecruitIQApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => DashboardViewModel()),
         ChangeNotifierProvider(create: (_) => UploadViewModel()),
         ChangeNotifierProvider(create: (_) => CandidatesViewModel()),
-        // Required by Job Requirements + Match Results.
         ChangeNotifierProvider(create: (_) => JobViewModel()),
       ],
       child: MaterialApp(
@@ -70,103 +97,40 @@ class RecruitIQApp extends StatelessWidget {
           ),
           scaffoldBackgroundColor: AppColors.surface,
           textTheme: GoogleFonts.dmSansTextTheme(base.textTheme),
-          pageTransitionsTheme: const PageTransitionsTheme(
-            builders: {
-              TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
-              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-              TargetPlatform.windows: FadeForwardsPageTransitionsBuilder(),
-              TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-              TargetPlatform.linux: FadeForwardsPageTransitionsBuilder(),
-              TargetPlatform.fuchsia: FadeForwardsPageTransitionsBuilder(),
-            },
-          ),
           appBarTheme: AppBarTheme(
             backgroundColor: AppColors.cardBg,
             foregroundColor: AppColors.ink,
             elevation: 0,
-            scrolledUnderElevation: 0,
             centerTitle: false,
             titleTextStyle: AppText.title(17),
-            systemOverlayStyle: const SystemUiOverlayStyle(
-              statusBarColor: Colors.transparent,
-              statusBarIconBrightness: Brightness.dark,
-            ),
           ),
           inputDecorationTheme: InputDecorationTheme(
             filled: true,
             fillColor: AppColors.cardBg,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 15,
-              vertical: 15,
-            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(13),
-              borderSide: BorderSide(color: AppColors.border2),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.border2),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(13),
-              borderSide: BorderSide(color: AppColors.border2),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.border2),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(13),
-              borderSide: const BorderSide(
-                color: AppColors.orange,
-                width: 1.5,
-              ),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
             ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(13),
-              borderSide: const BorderSide(color: AppColors.red),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(13),
-              borderSide: const BorderSide(color: AppColors.red, width: 1.5),
-            ),
+            errorStyle: const TextStyle(fontSize: 11, color: AppColors.red),
           ),
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accent,
               foregroundColor: Colors.white,
               elevation: 0,
-              minimumSize: const Size(0, 50),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-              textStyle: AppText.title(14, color: Colors.white),
+              minimumSize: const Size(double.infinity, 54),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              textStyle: AppText.title(15),
             ),
-          ),
-          filledButtonTheme: FilledButtonThemeData(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.accent,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(0, 50),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-          ),
-          outlinedButtonTheme: OutlinedButtonThemeData(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.ink,
-              minimumSize: const Size(0, 48),
-              side: BorderSide(color: AppColors.border2),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(13),
-              ),
-            ),
-          ),
-          chipTheme: base.chipTheme.copyWith(
-            backgroundColor: AppColors.logoAqua,
-            side: BorderSide(color: AppColors.border2),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(100),
-            ),
-            labelStyle: AppText.label(12),
-          ),
-          dividerTheme: const DividerThemeData(
-            color: AppColors.divider,
-            thickness: 1,
           ),
         ),
         builder: (context, child) => NetworkStatusListener(
@@ -185,128 +149,62 @@ class RecruitIQApp extends StatelessWidget {
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
-
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _fade;
-  late final Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 700),
-    );
-    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
-    _scale = Tween<double>(begin: .82, end: 1).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack),
-    );
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
     _ctrl.forward();
     _navigate();
   }
 
   @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
+  void dispose() { _ctrl.dispose(); super.dispose(); }
 
   Future<void> _navigate() async {
-    await Future.delayed(const Duration(milliseconds: 1600));
+    await Future.delayed(const Duration(milliseconds: 1800));
     if (!mounted) return;
-
     final authVm = context.read<AuthViewModel>();
     await authVm.checkAuthState();
-
     if (!mounted) return;
-    Navigator.pushReplacementNamed(
-      context,
-      authVm.isLoggedIn ? '/dashboard' : '/login',
-    );
+    Navigator.pushReplacementNamed(context, authVm.isLoggedIn ? '/dashboard' : '/login');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.ink,
-      body: SafeArea(
+      body: FadeTransition(
+        opacity: _fade,
         child: Center(
-          child: FadeTransition(
-            opacity: _fade,
-            child: ScaleTransition(
-              scale: _scale,
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 104,
-                      height: 104,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(28),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.accent.withOpacity(.35),
-                            blurRadius: 34,
-                            offset: const Offset(0, 14),
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.all(4),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(24),
-                        child: Image.asset(
-                          'assets/icon/image.png',
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 26),
-                    Text(
-                      'RecruitIQ',
-                      style: AppText.headline(28, color: Colors.white),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'AI-POWERED CANDIDATE SCREENING',
-                      textAlign: TextAlign.center,
-                      style: AppText.caption(
-                        10,
-                        color: Colors.white.withOpacity(.48),
-                      ).copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: .13,
-                      ),
-                    ),
-                    const SizedBox(height: 42),
-                    SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.accentLight.withOpacity(.8),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      'Preparing your recruitment workspace…',
-                      style: AppText.caption(
-                        10,
-                        color: Colors.white.withOpacity(.30),
-                      ),
-                    ),
-                  ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 100, height: 104,
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(28)),
+                padding: const EdgeInsets.all(4),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Image.asset('assets/icon/image.png', fit: BoxFit.cover),
                 ),
               ),
-            ),
+              const SizedBox(height: 32),
+              Text('RecruitIQ', style: AppText.headline(32, color: Colors.white)),
+              const SizedBox(height: 12),
+              Text('AI-POWERED CANDIDATE SCREENING', 
+                style: AppText.caption(11, color: Colors.white60).copyWith(letterSpacing: 2, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 60),
+              const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white30)),
+            ],
           ),
         ),
       ),
